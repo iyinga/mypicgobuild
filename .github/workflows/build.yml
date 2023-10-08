@@ -34,6 +34,7 @@ jobs:
         run: |
           git clone https://github.com/Molunerfinn/PicGo.git pic
           cd pic
+          rm yarn.lock
           sed -i 's/always/never/g' package.json
           yarn
           yarn global add xvfb-maybe
