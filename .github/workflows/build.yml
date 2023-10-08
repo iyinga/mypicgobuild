@@ -15,16 +15,21 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '16.x'
-      - name: Cache Yarn dependencies
-        uses: actions/cache@v2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      
+      - uses: actions/cache@v3
+        id: yarn-cache
         with:
-          path: C:\Users\runneradmin\AppData\Local\npm-cache
-          key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            yarn-${{ runner.os }}-
+            ${{ runner.os }}-yarn-
+
       - name: Yarn install
         run: |
           git clone https://github.com/Molunerfinn/PicGo.git pic
@@ -38,7 +43,7 @@ jobs:
         with:
           name: build
           # A file, directory or wildcard pattern that describes what to upload
-          path: ./pic/dist*/
+          path: ./pic/dist*/*.exe
           # The desired behavior if no files are found using the provided path.
 
       
