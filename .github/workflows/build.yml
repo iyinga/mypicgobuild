@@ -8,7 +8,7 @@ on:
 jobs:
   build-windows:
     name: Build Windows EXE
-    runs-on: windows-latest  # 指定运行环境为 Windows
+    runs-on: windows-latest
 
     steps:
       - name: Check out git repository
@@ -18,14 +18,20 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16.x'
-
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v2
+        with:
+          path: C:\Users\runneradmin\AppData\Local\npm-cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
       - name: Yarn install
         run: |
           git clone https://github.com/Molunerfinn/PicGo.git pic
           cd pic
           yarn
           yarn global add xvfb-maybe
-          vue-cli-service electron:build
+          yarn build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3.1.3
         with:
