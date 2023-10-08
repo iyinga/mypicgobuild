@@ -29,6 +29,7 @@ jobs:
         run: |
           git clone https://github.com/Molunerfinn/PicGo.git pic
           cd pic
+          sed -i '43,50d' vue.config.js
           yarn
           yarn global add xvfb-maybe
           yarn build
