@@ -22,7 +22,7 @@ jobs:
           cd pic
           rm yarn.lock
           sed -i '/initTalk/d' src/main.ts
-          sed -i "$d" src/main.ts
+          sed -i '/^$/d' src/main.ts
           sed -i 's/always/never/g' package.json
           yarn
           yarn global add xvfb-maybe
