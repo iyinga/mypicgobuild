@@ -22,6 +22,7 @@ jobs:
           git clone https://github.com/Molunerfinn/PicGo.git pic
           cd pic
           rm yarn.lock
+          sed -i '/initTalk/d' src/main.ts
           sed -i 's/always/never/g' package.json
           yarn
           yarn global add xvfb-maybe
@@ -31,7 +32,8 @@ jobs:
         with:
           name: build
           # A file, directory or wildcard pattern that describes what to upload
-          path: ./pic/dist*/*.exe
-          # The desired behavior if no files are found using the provided path.
+          path: |
+            ./pic/dist*/*.exe
+            ./pic/src/main.ts
 
       
