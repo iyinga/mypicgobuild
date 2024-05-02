@@ -8,18 +8,22 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Check out git repository
-        uses: actions/checkout@v4
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18.x'
-
+      - name: get source
+        run: |
+           git clone https://github.com/Molunerfinn/PicGo.git .
+      - name: cache node modules
+        uses: action/cache@4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
       - name: Yarn install
         run: |
-          git clone https://github.com/Molunerfinn/PicGo.git pic
-          cd pic
           sed -i '/initTalk/d' src/main.ts
           sed -i '/^$/d' src/main.ts
           sed -i 's/always/never/g' package.json
@@ -32,7 +36,7 @@ jobs:
           name: build
           # A file, directory or wildcard pattern that describes what to upload
           path: |
-            ./pic/dist*/*.exe
-            ./pic/src/main.ts
+            ./dist*/*.exe
+            ./src/main.ts
 
       
