@@ -30,11 +30,11 @@ jobs:
             ${{ runner.os }}-npm-
       - name: Yarn install
         run: |
-          sudo apt-get update && sudo apt-get install wine
+          dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install wine32  && sudo apt-get install wine
           sudo apt-get install --no-install-recommends -y icnsutils graphicsmagick xz-utils
           sed -i '/initTalk/d' src/main.ts
           sed -i '/^$/d' src/main.ts
-          sed -i 's/--publish always/--x64 --win --publish never/g' package.json
+          sed -i 's/--publish always/--win --publish never/g' package.json
           yarn
           yarn global add xvfb-maybe
           yarn release
