@@ -30,7 +30,7 @@ jobs:
             ${{ runner.os }}-npm-
       - name: Yarn install
         run: |
-          dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install wine32  && sudo apt-get install wine
+          sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install wine32  && sudo apt-get install wine
           sudo apt-get install --no-install-recommends -y icnsutils graphicsmagick xz-utils
           sed -i '/initTalk/d' src/main.ts
           sed -i '/^$/d' src/main.ts
