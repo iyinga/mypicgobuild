@@ -34,7 +34,7 @@ jobs:
           sudo apt-get install --no-install-recommends -y icnsutils graphicsmagick xz-utils
           sed -i '/initTalk/d' src/main.ts
           sed -i '/^$/d' src/main.ts
-          sed -i 's/--publish always/--win --publish never/g' package.json
+          sed -i 's/--publish always/--x64 --win --publish never/g' package.json
           yarn
           yarn global add xvfb-maybe
           yarn release
