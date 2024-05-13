@@ -18,7 +18,11 @@ jobs:
       - name: cache node modules
         uses: actions/cache@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            %APPDATA%\npm-cache
+            %USERPROFILE%\.electron
+            %USERPROFILE%\AppData\Local\Yarn\cache
           key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-npm-
