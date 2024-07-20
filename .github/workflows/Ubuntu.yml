@@ -22,10 +22,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            ~/.yarn-cache
             node_modules
             $HOME/.cache
             $HOME/.electron
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-npm-
       - name: Yarn install
