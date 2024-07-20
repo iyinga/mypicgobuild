@@ -23,7 +23,7 @@ jobs:
             %APPDATA%\npm-cache
             %USERPROFILE%\.electron
             %USERPROFILE%\AppData\Local\Yarn\cache
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-npm-
       - name: Yarn install
