@@ -15,6 +15,12 @@ jobs:
       - name: get source
         run: |
            git clone https://github.com/Molunerfinn/PicGo.git .
+
+      - name: Use official npm registry
+        run: yarn config set registry https://registry.npmjs.org
+
+      - name: Replace registry URLs in yarn.lock
+        run: sed -i 's/https:\/\/registry.npmmirror.com/https:\/\/registry.npmjs.org/g' yarn.lock
       - name: cache node modules
         uses: actions/cache@v4
         with:
