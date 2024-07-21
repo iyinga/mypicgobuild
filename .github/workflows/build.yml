@@ -15,19 +15,15 @@ jobs:
       - name: get source
         run: |
            git clone https://github.com/Molunerfinn/PicGo.git .
+           rm -rf yarn.lock
 
-      - name: Use official npm registry
-        run: yarn config set registry https://registry.npmjs.org
-
-      - name: Replace registry URLs in yarn.lock
-        run: sed -i 's/https:\/\/registry.npmmirror.com/https:\/\/registry.npmjs.org/g' yarn.lock
       - name: cache node modules
         uses: actions/cache@v4
         with:
           path: |
             node_modules
             C:\Users\runneradmin\AppData\Local\electron
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
           restore-keys: |
             ${{ runner.os }}-npm-
       - name: Yarn install
