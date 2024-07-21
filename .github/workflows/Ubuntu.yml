@@ -24,8 +24,8 @@ jobs:
           path: |
             ~/.yarn-cache
             node_modules
-            $HOME/.cache
-            $HOME/.electron
+            ~/.cache
+            ~/.electron
           key: ${{ runner.os }}-npm-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-npm-
