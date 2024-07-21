@@ -20,9 +20,7 @@ jobs:
         with:
           path: |
             node_modules
-            %APPDATA%\npm-cache
-            %USERPROFILE%\.electron
-            %USERPROFILE%\AppData\Local\Yarn\cache
+            C:\Users\runneradmin\AppData\Local\electron
           key: ${{ runner.os }}-npm-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-npm-
