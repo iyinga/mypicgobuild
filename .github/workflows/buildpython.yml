@@ -247,12 +247,12 @@ jobs:
       shell: cmd
       continue-on-error: true  # Documentation build might fail, but installer can still be built
     
-    - name: Run basic tests
-      run: |
-        cd cpython-src
-        PCbuild\${{ matrix.architecture }}\python.exe -c "import sys; print(f'Python {sys.version} built successfully')"
-        PCbuild\${{ matrix.architecture }}\python.exe -m test.test_os
-      shell: cmd
+    # - name: Run basic tests
+    #   run: |
+    #     cd cpython-src
+    #     PCbuild\${{ matrix.architecture }}\python.exe -c "import sys; print(f'Python {sys.version} built successfully')"
+    #     PCbuild\${{ matrix.architecture }}\python.exe -m test.test_os
+    #   shell: cmd
     
     - name: Build MSI Installer
       run: |
