@@ -1,9 +1,6 @@
 name: Build CPython Windows Installer
 
 on:
-  push:
-    tags:
-      - 'v*'  # Trigger on version tags like v3.12.0, v3.11.5, etc.
   workflow_dispatch:  # Allow manual trigger
     inputs:
       python_version:
@@ -31,7 +28,7 @@ jobs:
         architecture: ${{ fromJson(
           (inputs.architecture == 'both' && '["x64", "x86"]') ||
           (inputs.architecture && format('["{0}"]', inputs.architecture)) ||
-          '["x64", "x86"]') }}
+          '["x64", "x86"]' ) }}
     
     steps:
     - name: Checkout repository
@@ -260,16 +257,34 @@ jobs:
         $version = "${{ steps.version.outputs.python_version }}"
         Write-Host "Building MSI installer for Python $version"
         
-        # Check for different MSI build methods based on Python version
+        # 设置版本变量
+        $majorVersion = $version.Split('.')[0]
+        $minorVersion = $version.Split('.')[1]
+        $patchVersion = $version.Split('.')[2]
+        $shortVersion = "$majorVersion.$minorVersion"
+        
+        # 创建版本定义文件
+        $versionDef = @"
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <?define ProductVersion = "$version" ?>
+  <?define ShortVersion = "$shortVersion" ?>
+  <?define MajorVersion = "$majorVersion" ?>
+  <?define MinorVersion = "$minorVersion" ?>
+  <?define PatchVersion = "$patchVersion" ?>
+  <?define Platform = "${{ matrix.architecture }}" ?>
+</Include>
+"@
+        $versionDef | Out-File -FilePath "Tools\msi\version.wxi" -Encoding UTF8
+        
+        # 检查 MSI 构建方法
         $buildReleasePath = "Tools\msi\buildrelease.py"
         $msiProjectPath = "Tools\msi\bundle\bundle.wixproj"
-        $legacyMsiPath = "PC\bdist_wininst\wininst-*.exe"
         
         if (Test-Path $buildReleasePath) {
           Write-Host "Using buildrelease.py method"
-          Write-Host "Build release script found at: $buildReleasePath"
           
-          # Method 1: Use buildrelease.py (Python 3.9+)
+          # 使用已构建的 Python
           $pythonExe = "PCbuild\${{ matrix.architecture }}\python.exe"
           if (Test-Path $pythonExe) {
             Write-Host "Using built Python to run buildrelease.py"
@@ -278,67 +293,65 @@ jobs:
             Write-Host "Using system Python to run buildrelease.py"
             python $buildReleasePath -x ${{ matrix.architecture }} -b --skip-nuget --skip-zip
           }
-          
         } elseif (Test-Path $msiProjectPath) {
           Write-Host "Using MSBuild with WiX project method"
           
-          # Method 2: Direct MSBuild of WiX project
+          # 使用 MSBuild 构建 WiX 项目
           $msbuildArgs = @(
             $msiProjectPath,
             "/p:Configuration=Release",
             "/p:Platform=${{ matrix.architecture }}",
-            "/p:OutputPath=..\..\PCbuild\${{ matrix.architecture }}\"
+            "/p:OutputPath=..\..\PCbuild\${{ matrix.architecture }}\",
+            "/p:DefineConstants=ProductVersion=$version;ShortVersion=$shortVersion"
           )
           
           msbuild @msbuildArgs
-          
         } else {
-          Write-Host "Trying alternative MSI build methods..."
+          Write-Host "Using manual WiX build method"
           
-          # Method 3: Look for makefile or other build scripts
-          if (Test-Path "Tools\msi\make_msi.py") {
-            Write-Host "Using make_msi.py"
-            python Tools\msi\make_msi.py
-          } elseif (Test-Path "Tools\msi\msi.py") {
-            Write-Host "Using msi.py"
-            python Tools\msi\msi.py
-          } else {
-            Write-Host "No MSI build script found. Available tools:"
-            Get-ChildItem Tools -Recurse -Filter "*.py" | Where-Object {$_.Name -like "*msi*" -or $_.Name -like "*build*" -or $_.Name -like "*release*"} | Format-Table Name, FullName
+          # 手动构建 MSI
+          $wixFiles = Get-ChildItem Tools\msi -Filter "*.wxs" -Recurse
+          if ($wixFiles) {
+            Write-Host "Found WiX source files, building MSI..."
             
-            Write-Host "Attempting manual MSI build using available tools..."
+            # 创建输出目录
+            New-Item -ItemType Directory -Force -Path "PCbuild\${{ matrix.architecture }}\wix"
             
-            # Method 4: Try to build MSI manually using available WiX files
-            $wixFiles = Get-ChildItem Tools -Recurse -Filter "*.wxs" | Select-Object -First 1
-            if ($wixFiles) {
-              Write-Host "Found WiX source files, attempting manual build"
-              Write-Host "This may not work for all versions - consider using a different Python version"
-              
-              # This is a simplified approach - may need adjustment
-              candle.exe Tools\msi\*.wxs -out PCbuild\${{ matrix.architecture }}\
-              light.exe PCbuild\${{ matrix.architecture }}\*.wixobj -out PCbuild\${{ matrix.architecture }}\python-installer.msi
-            } else {
-              Write-Error "No MSI build method found for this Python version"
-              Write-Host "Consider using one of these Python versions that have known working MSI builds:"
-              Write-Host "- 3.12.0 or later"
-              Write-Host "- 3.11.5 or later" 
-              Write-Host "- 3.10.12 or later"
-              exit 1
+            # 编译 WiX 文件
+            $candleArgs = @(
+              "-dProductVersion=$version",
+              "-dShortVersion=$shortVersion",
+              "-dPlatform=${{ matrix.architecture }}",
+              "-out", "PCbuild\${{ matrix.architecture }}\wix\",
+              "Tools\msi\*.wxs"
+            )
+            candle.exe @candleArgs
+            
+            if ($LASTEXITCODE -eq 0) {
+              # 链接 WiX 对象文件
+              $lightArgs = @(
+                "-ext", "WixUIExtension",
+                "-out", "PCbuild\${{ matrix.architecture }}\python-$version-${{ matrix.architecture }}-installer.msi",
+                "PCbuild\${{ matrix.architecture }}\wix\*.wixobj"
+              )
+              light.exe @lightArgs
             }
+          } else {
+            Write-Error "No WiX source files found in Tools\msi directory"
+            exit 1
           }
         }
         
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "MSI build failed with exit code: $LASTEXITCODE"
-          Write-Host "Checking for partial build artifacts..."
-          Get-ChildItem PCbuild\${{ matrix.architecture }} -Filter "*.msi" -ErrorAction SilentlyContinue
-          Get-ChildItem Tools\msi -Recurse -Filter "*.msi" -ErrorAction SilentlyContinue
-          exit $LASTEXITCODE
+        # 检查构建结果
+        $msiFile = "PCbuild\${{ matrix.architecture }}\python-$version-${{ matrix.architecture }}-installer.msi"
+        if (Test-Path $msiFile) {
+          Write-Host "MSI installer built successfully: $msiFile"
+          # 复制到工作目录
+          Copy-Item $msiFile "..\python-$version-${{ matrix.architecture }}-installer.msi"
+        } else {
+          Write-Error "MSI installer build failed"
+          exit 1
         }
-        
-        Write-Host "MSI build completed"
-        Write-Host "Looking for MSI files..."
-        Get-ChildItem . -Recurse -Filter "*.msi" | Format-Table FullName, Length
       shell: powershell
     
     - name: Find and rename installer
