@@ -1,407 +1,49 @@
 name: Build CPython Windows Installer
 
 on:
-  workflow_dispatch:  # Allow manual trigger
-    inputs:
-      python_version:
-        description: 'Python version to build (e.g., 3.12.0, 3.11.5)'
-        required: true
-        default: '3.11.13'
-        type: string
-      architecture:
-        description: 'Architecture to build'
-        required: true
-        default: 'both'
-        type: choice
-        options:
-        - 'both'
-        - 'x64'
-        - 'x86'
+  workflow_dispatch:
 
 jobs:
-  build-cpython-installer:
+  build:
     runs-on: windows-latest
-    
-    strategy:
-      matrix:
-        python_version: ${{ fromJson(inputs.python_version && format('["{0}"]', inputs.python_version) || '["3.11.13"]') }}
-        architecture: ${{ fromJson(
-          (inputs.architecture == 'both' && '["x64", "x86"]') ||
-          (inputs.architecture && format('["{0}"]', inputs.architecture)) ||
-          '["x64", "x86"]' ) }}
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout CPython source
+      run: git clone https://github.com/python/cpython.git --depth 1
 
-    # 缓存 Python 源码
-    - name: Cache Python source
-      uses: actions/cache@v3
-      id: cache-python-source
-      with:
-        path: cpython-src
-        key: python-source-${{ steps.version.outputs.python_version }}
-        restore-keys: |
-          python-source-
-
-    # 缓存外部依赖
-    - name: Cache external dependencies
-      uses: actions/cache@v3
-      id: cache-externals
-      with:
-        path: cpython-src/externals
-        key: externals-${{ steps.version.outputs.python_version }}-${{ matrix.architecture }}
-        restore-keys: |
-          externals-${{ steps.version.outputs.python_version }}-
-          externals-
-
-    # 缓存构建工具
-    - name: Cache build tools
-      uses: actions/cache@v3
-      id: cache-tools
+    - name: Cache CPython build
+      uses: actions/cache@v4
       with:
         path: |
-          C:\Program Files (x86)\WiX Toolset v3.11
-          C:\Program Files (x86)\Windows Kits\10
-        key: build-tools-${{ runner.os }}-${{ hashFiles('**/get_externals.bat') }}
+          cpython\PCBuild\amd64
+          cpython\PCBuild\obj
+        key: cpython-${{ runner.os }}-${{ hashFiles('cpython/PCBuild/**') }}
         restore-keys: |
-          build-tools-${{ runner.os }}-
+          cpython-${{ runner.os }}-
 
-    # 缓存编译产物
-    - name: Cache build artifacts
-      uses: actions/cache@v3
-      id: cache-build
-      with:
-        path: cpython-src/PCbuild/${{ matrix.architecture }}
-        key: build-${{ steps.version.outputs.python_version }}-${{ matrix.architecture }}-${{ hashFiles('cpython-src/PCbuild/*.vcxproj') }}
-        restore-keys: |
-          build-${{ steps.version.outputs.python_version }}-${{ matrix.architecture }}-
-          build-${{ steps.version.outputs.python_version }}-
+    - name: Set up MSVC Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.3
-    
-    - name: Setup Build Environment
+    - name: Build CPython
+      working-directory: cpython/PCBuild
       run: |
-        # GitHub runners already have VS Build Tools, just need to setup environment
-        Write-Host "Setting up build environment..."
-        
-        # Find VS installation
-        $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-        if (Test-Path $vsWhere) {
-          $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if ($vsPath) {
-            Write-Host "Found Visual Studio at: $vsPath"
-            # Add VS tools to PATH
-            $vcVarsPath = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
-            if (Test-Path $vcVarsPath) {
-              Write-Host "VS Build Tools already available"
-            }
-          }
-        }
-        
-        # Verify MSBuild is available
-        $msbuild = Get-Command msbuild.exe -ErrorAction SilentlyContinue
-        if ($msbuild) {
-          Write-Host "MSBuild found at: $($msbuild.Source)"
-        } else {
-          Write-Host "MSBuild not in PATH, but should be available via setup-msbuild action"
-        }
-      shell: powershell
-    
-    # 只在缓存未命中时安装工具
-    - name: Install WiX Toolset
-      if: steps.cache-tools.outputs.cache-hit != 'true'
+        build.bat -p x64 -c Release
+
+    - name: Build Windows Installer (MSI)
+      working-directory: cpython
       run: |
-        choco install wixtoolset -y
-        # Add WiX to PATH
-        echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      shell: powershell
-    
-    - name: Install Windows SDK
-      if: steps.cache-tools.outputs.cache-hit != 'true'
+        cd Tools\msi
+        buildrelease.bat -p x64
+
+    - name: List build artifacts
       run: |
-        choco install windows-sdk-10-version-2004-all -y
-    
-    - name: Determine Python version
-      id: version
-      run: |
-        if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag") {
-          # Extract version from tag (remove 'v' prefix if present)
-          $tag = "${{ github.ref_name }}"
-          $version = $tag -replace '^v', ''
-          Write-Host "Building from tag: $tag"
-          Write-Host "Python version: $version"
-          echo "python_version=$version" >> $env:GITHUB_OUTPUT
-        } elseif ("${{ inputs.python_version }}") {
-          $version = "${{ inputs.python_version }}"
-          Write-Host "Building from manual input: $version"
-          echo "python_version=$version" >> $env:GITHUB_OUTPUT
-        } else {
-          $version = "${{ matrix.python_version }}"
-          Write-Host "Building default version: $version"
-          echo "python_version=$version" >> $env:GITHUB_OUTPUT
-        }
-      shell: powershell
-    
-    # 只在缓存未命中时克隆源码
-    - name: Clone CPython source
-      if: steps.cache-python-source.outputs.cache-hit != 'true'
-      run: |
-        $version = "${{ steps.version.outputs.python_version }}"
-        Write-Host "Cloning CPython version: $version"
-        
-        # Try to clone the specific version tag
-        git clone --depth 1 --branch "v$version" https://github.com/python/cpython.git cpython-src
-        
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "Tag v$version not found, trying without 'v' prefix..."
-          git clone --depth 1 --branch "$version" https://github.com/python/cpython.git cpython-src
-        }
-        
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "Failed to clone CPython version $version"
-          Write-Host "Available tags:"
-          git ls-remote --tags https://github.com/python/cpython.git | Select-String "v3\." | Select-Object -Last 10
-          exit 1
-        }
-        
-        cd cpython-src
-        Write-Host "Successfully cloned CPython:"
-        git log --oneline -1
-      shell: powershell
-    
-    - name: Debug directory structure
-      run: |
-        Write-Host "=== DEBUG: Directory Structure ==="
-        Write-Host "Current working directory: $(Get-Location)"
-        Write-Host "Root directory contents:"
-        Get-ChildItem -Force | Format-Table -AutoSize
-        
-        if (Test-Path "cpython-src") {
-          Write-Host "cpython-src directory exists"
-          Write-Host "cpython-src contents:"
-          Get-ChildItem cpython-src | Format-Table -AutoSize
-          
-          if (Test-Path "cpython-src\PCbuild") {
-            Write-Host "PCbuild directory exists"
-            Write-Host "PCbuild contents:"
-            Get-ChildItem cpython-src\PCbuild | Select-Object Name, Length | Format-Table -AutoSize
-          } else {
-            Write-Warning "PCbuild directory not found in cpython-src"
-          }
-        } else {
-          Write-Error "cpython-src directory not found!"
-        }
-        Write-Host "=== END DEBUG ==="
-      shell: powershell
-    
-    # 只在缓存未命中时获取外部依赖
-    - name: Get external dependencies
-      if: steps.cache-externals.outputs.cache-hit != 'true'
-      run: |
-        Write-Host "Current directory: $(Get-Location)"
-        if (-not (Test-Path "cpython-src")) {
-          Write-Error "cpython-src directory not found!"
-          Get-ChildItem -Force
-          exit 1
-        }
-        
-        cd cpython-src
-        Write-Host "Getting external dependencies..."
-        Write-Host "Current directory: $(Get-Location)"
-        
-        if (-not (Test-Path "PCbuild\get_externals.bat")) {
-          Write-Error "get_externals.bat not found!"
-          Write-Host "PCbuild directory contents:"
-          Get-ChildItem PCbuild -ErrorAction SilentlyContinue
-          exit 1
-        }
-        
-        # Run get_externals with error handling
-        cmd /c "PCbuild\get_externals.bat"
-        
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "get_externals.bat failed with exit code: $LASTEXITCODE"
-          exit $LASTEXITCODE
-        }
-        
-        Write-Host "External dependencies downloaded successfully"
-      shell: powershell
-    
-    # 只在缓存未命中时执行完整构建
-    - name: Build CPython (Release)
-      if: steps.cache-build.outputs.cache-hit != 'true'
-      run: |
-        cd cpython-src
-        PCbuild\build.bat -p ${{ matrix.architecture }} -c Release
-      shell: cmd
-    
-    - name: Build Python documentation
-      run: |
-        cd cpython-src\Doc
-        make.bat html
-      shell: cmd
-      continue-on-error: true  # Documentation build might fail, but installer can still be built
-    
-    # - name: Run basic tests
-    #   run: |
-    #     cd cpython-src
-    #     PCbuild\${{ matrix.architecture }}\python.exe -c "import sys; print(f'Python {sys.version} built successfully')"
-    #     PCbuild\${{ matrix.architecture }}\python.exe -m test.test_os
-    #   shell: cmd
-    
-    - name: Build MSI Installer
-      run: |
-        cd cpython-src
-        $version = "${{ steps.version.outputs.python_version }}"
-        Write-Host "Building MSI installer for Python $version"
-        
-        # 设置版本变量
-        $majorVersion = $version.Split('.')[0]
-        $minorVersion = $version.Split('.')[1]
-        $patchVersion = $version.Split('.')[2]
-        $shortVersion = "$majorVersion.$minorVersion"
-        
-        # 创建版本定义文件
-        $versionDef = @"
-<?xml version="1.0" encoding="utf-8"?>
-<Include>
-  <?define ProductVersion = "$version" ?>
-  <?define ShortVersion = "$shortVersion" ?>
-  <?define MajorVersion = "$majorVersion" ?>
-  <?define MinorVersion = "$minorVersion" ?>
-  <?define PatchVersion = "$patchVersion" ?>
-  <?define Platform = "${{ matrix.architecture }}" ?>
-</Include>
-"@
-        $versionDef | Out-File -FilePath "Tools\msi\version.wxi" -Encoding UTF8
-        
-        # 检查 MSI 构建方法
-        $buildReleasePath = "Tools\msi\buildrelease.py"
-        $msiProjectPath = "Tools\msi\bundle\bundle.wixproj"
-        
-        if (Test-Path $buildReleasePath) {
-          Write-Host "Using buildrelease.py method"
-          
-          # 使用已构建的 Python
-          $pythonExe = "PCbuild\${{ matrix.architecture }}\python.exe"
-          if (Test-Path $pythonExe) {
-            Write-Host "Using built Python to run buildrelease.py"
-            & $pythonExe $buildReleasePath -x ${{ matrix.architecture }} -b --skip-nuget --skip-zip
-          } else {
-            Write-Host "Using system Python to run buildrelease.py"
-            python $buildReleasePath -x ${{ matrix.architecture }} -b --skip-nuget --skip-zip
-          }
-        } elseif (Test-Path $msiProjectPath) {
-          Write-Host "Using MSBuild with WiX project method"
-          
-          # 使用 MSBuild 构建 WiX 项目
-          $msbuildArgs = @(
-            $msiProjectPath,
-            "/p:Configuration=Release",
-            "/p:Platform=${{ matrix.architecture }}",
-            "/p:OutputPath=..\..\PCbuild\${{ matrix.architecture }}\",
-            "/p:DefineConstants=ProductVersion=$version;ShortVersion=$shortVersion"
-          )
-          
-          msbuild @msbuildArgs
-        } else {
-          Write-Host "Using manual WiX build method"
-          
-          # 手动构建 MSI
-          $wixFiles = Get-ChildItem Tools\msi -Filter "*.wxs" -Recurse
-          if ($wixFiles) {
-            Write-Host "Found WiX source files, building MSI..."
-            
-            # 创建输出目录
-            New-Item -ItemType Directory -Force -Path "PCbuild\${{ matrix.architecture }}\wix"
-            
-            # 编译 WiX 文件
-            $candleArgs = @(
-              "-dProductVersion=$version",
-              "-dShortVersion=$shortVersion",
-              "-dPlatform=${{ matrix.architecture }}",
-              "-out", "PCbuild\${{ matrix.architecture }}\wix\",
-              "Tools\msi\*.wxs"
-            )
-            candle.exe @candleArgs
-            
-            if ($LASTEXITCODE -eq 0) {
-              # 链接 WiX 对象文件
-              $lightArgs = @(
-                "-ext", "WixUIExtension",
-                "-out", "PCbuild\${{ matrix.architecture }}\python-$version-${{ matrix.architecture }}-installer.msi",
-                "PCbuild\${{ matrix.architecture }}\wix\*.wixobj"
-              )
-              light.exe @lightArgs
-            }
-          } else {
-            Write-Error "No WiX source files found in Tools\msi directory"
-            exit 1
-          }
-        }
-        
-        # 检查构建结果
-        $msiFile = "PCbuild\${{ matrix.architecture }}\python-$version-${{ matrix.architecture }}-installer.msi"
-        if (Test-Path $msiFile) {
-          Write-Host "MSI installer built successfully: $msiFile"
-          # 复制到工作目录
-          Copy-Item $msiFile "..\python-$version-${{ matrix.architecture }}-installer.msi"
-        } else {
-          Write-Error "MSI installer build failed"
-          exit 1
-        }
-      shell: powershell
-    
-    - name: Find and rename installer
-      run: |
-        $version = "${{ steps.version.outputs.python_version }}"
-        $installerPath = Get-ChildItem -Path "cpython-src\PCbuild\${{ matrix.architecture }}\" -Filter "*.msi" | Select-Object -First 1
-        if ($installerPath) {
-          $newName = "python-$version-${{ matrix.architecture }}-installer.msi"
-          Copy-Item $installerPath.FullName $newName
-          Write-Host "Installer created: $newName"
-          Write-Host "Installer size: $((Get-Item $newName).Length / 1MB) MB"
-        } else {
-          Write-Error "No MSI installer found!"
-          Get-ChildItem -Path "cpython-src\PCbuild\${{ matrix.architecture }}\" -Recurse | Where-Object {$_.Extension -eq ".msi"}
-        }
-      shell: powershell
-    
-    - name: Verify installer
-      run: |
-        $version = "${{ steps.version.outputs.python_version }}"
-        $installer = "python-$version-${{ matrix.architecture }}-installer.msi"
-        if (Test-Path $installer) {
-          Write-Host "Installer verification:"
-          Write-Host "File: $installer"
-          Write-Host "Size: $((Get-Item $installer).Length) bytes"
-          Write-Host "Created: $((Get-Item $installer).CreationTime)"
-          
-          # Test installer properties
-          try {
-            $windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
-            $database = $windowsInstaller.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $null, $windowsInstaller, @($installer, 0))
-            $view = $database.GetType().InvokeMember("OpenView", "InvokeMethod", $null, $database, @("SELECT Value FROM Property WHERE Property='ProductName'"))
-            $view.GetType().InvokeMember("Execute", "InvokeMethod", $null, $view, $null)
-            $record = $view.GetType().InvokeMember("Fetch", "InvokeMethod", $null, $view, $null)
-            if ($record) {
-              $productName = $record.GetType().InvokeMember("StringData", "GetProperty", $null, $record, @(1))
-              Write-Host "Product Name: $productName"
-            }
-          } catch {
-            Write-Host "Could not read MSI properties, but file exists and appears valid"
-          }
-        } else {
-          Write-Error "Installer not found!"
-        }
-      shell: powershell
-    
-    - name: Upload installer artifact
+        echo "Build outputs:"
+        dir /S /B cpython\PCBuild\amd64
+        dir /S /B cpython\Tools\msi\*.msi
+
+    - name: Upload installer
       uses: actions/upload-artifact@v4
       with:
-        name: python-${{ steps.version.outputs.python_version }}-${{ matrix.architecture }}-installer
-        path: python-${{ steps.version.outputs.python_version }}-${{ matrix.architecture }}-installer.msi
-        retention-days: 30
-    
+        name: cpython-windows-installer
+        path: |
+          cpython\Tools\msi\*.msi
