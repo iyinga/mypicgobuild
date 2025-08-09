@@ -24,7 +24,7 @@ jobs:
     - name: Set up MSVC Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Build CPython
+    - name: Build CPython (Release x64)
       working-directory: cpython\PCBuild
       shell: cmd
       run: |
@@ -34,17 +34,18 @@ jobs:
       working-directory: cpython\Tools\msi
       shell: cmd
       run: |
-        buildrelease.bat -p x64
+        buildrelease.bat
 
     - name: List build artifacts
       run: |
-        echo "Build outputs:"
+        echo "===== CPython build output ====="
         dir /S /B cpython\PCBuild\amd64
-        dir /S /B cpython\Tools\msi\*.msi
+        echo "===== MSI installer ====="
+        dir /S /B cpython\Tools\msi\release\*.msi
 
     - name: Upload installer
       uses: actions/upload-artifact@v4
       with:
-        name: cpython-windows-installer
+        name: cpython-windows-msi
         path: |
-          cpython\Tools\msi\*.msi
+          cpython\Tools\msi\release\*.msi
