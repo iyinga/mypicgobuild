@@ -37,6 +37,7 @@ jobs:
         buildrelease.bat
 
     - name: List build artifacts
+      shell: cmd
       run: |
         echo "===== CPython build output ====="
         dir /S /B cpython\PCBuild\amd64
