@@ -1,0 +1,49 @@
+name: Build Windows EXE
+
+on: workflow_dispatch
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: get source
+        shell: bash
+        run: |
+           git clone https://github.com/Molunerfinn/PicGo.git .
+           del yarn.lock
+           sed -i '/initTalk/d' src/main.ts
+           sed -i '/^$/d' src/main.ts
+           sed -i 's/always/never/g' package.json           
+
+      # 缓存 Electron 下载的二进制文件
+      - name: 缓存 Electron 缓存目录
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('PicGo/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+      - name: Yarn install
+        shell: bash
+        run: |
+          npm install
+          npm run build
+          npm run electron:build -- --win
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          # A file, directory or wildcard pattern that describes what to upload
+          path: |
+            ./dist*/*.exe
+            ./src/main.ts
+
+      
