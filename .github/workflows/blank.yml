@@ -22,7 +22,13 @@ jobs:
           node-version: 18
           cache: yarn
           cache-dependency-path: yarn.lock
-        
+      - name: 设置 Yarn 源和网络超时
+        shell: bash
+        run: |
+          yarn config set registry https://registry.npmmirror.com
+          yarn config set disturl https://npmmirror.com/mirrors/node
+          yarn config set electron_mirror https://npmmirror.com/mirrors/electron/
+          yarn config set network-timeout 600000        
       - name: 缓存 Electron 缓存目录
         uses: actions/cache@v4
         with:
