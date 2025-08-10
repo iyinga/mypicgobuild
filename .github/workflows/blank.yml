@@ -37,7 +37,7 @@ jobs:
         run: |
           yarn install
           yarn build
-          yarn electron:build --win
+          yarn electron:build --win --publish never
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4
         with:
