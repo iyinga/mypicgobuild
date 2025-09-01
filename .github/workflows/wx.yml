@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         goos: [windows, darwin]   # 加了 linux，方便测试
-        goarch: [amd64, arm64]
+        goarch: [amd64]
 
     steps:
       # 拉取代码
