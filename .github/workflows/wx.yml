@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [windows, darwin]   # 加了 linux，方便测试
+        goos: [windows]   # 加了 linux，方便测试
         goarch: [amd64]
 
     steps:
