@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-go-binary:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     strategy:
       matrix:
         goos: [windows]   # 加了 linux，方便测试
