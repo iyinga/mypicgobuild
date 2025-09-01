@@ -40,10 +40,11 @@ jobs:
 
       # 编译
       - name: Build
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir dist
-          go build -o dist/wx_video_download-${{ matrix.goos }}-${{ matrix.goarch }} .
+          $env:CC="cl.exe"
+          go build -o dist/wx_video_download-${{ matrix.goarch }}.exe .
+
 
       # 上传 artifact
       - name: Upload artifact
