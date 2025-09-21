@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - name: Install MSYS2
-      uses: msys2/setup-msys2@master
+      uses: msys2/setup-msys2@v2
       with:
         update: true
         install: >-
