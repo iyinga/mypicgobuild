@@ -1,70 +1,21 @@
-name: Build aria2 for Windows with Features
-
-on:
-  workflow_dispatch:
-    
-
+name: Build Aria
+on: [workflow_dispatch]
 jobs:
   build:
-    runs-on: windows-latest
-    steps:
-
-      # Step 1: Checkout aria2 source code from GitHub
-      - name: Checkout aria2 repository
-        uses: actions/checkout@v4
-        with:
-          repository: aria2/aria2
-
-      # Step 2: Set up MSYS2
-      - name: Set up MSYS2
-        run: |
-          choco install msys2 --no-progress -y
-          refreshenv
-          # Ensure pacman is available and update MSYS2
-          C:\msys64\usr\bin\bash.exe -c "pacman -Syu --noconfirm"
-          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm base-devel mingw-w64-x86_64-toolchain"
-
-      # Step 3: Install dependencies for aria2 features
-      - name: Install dependencies
-        run: |
-          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libxml2 zlib curl libssh2 openssl"
-          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libgcrypt gmp boost boost-libs"
-          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libtorrent-rasterbar"
-          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libmetalink"
-
-      # Step 4: Cache dependencies
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            C:\msys64\var\cache\pacman\pkg
-            C:\msys64\usr\local\mingw64
-          key: ${{ runner.os }}-aria2-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-aria2-
-
-      # Step 5: Build aria2 with required features
-      - name: Build aria2
-        run: |
-          # Create build directory
-          mkdir build
-          cd build
-          
-          # Configure CMake to enable features: openssl, bittorrent, metalink, rpc
-          C:\msys64\usr\bin\bash.exe -c "cmake .. -G 'MSYS Makefiles' -DENABLE_SSL=ON -DENABLE_BITTORRENT=ON -DENABLE_METALINK=ON -DENABLE_RPC=ON"
-
-          # Start the build process
-          C:\msys64\usr\bin\bash.exe -c "make -j$(nproc)"
-
-      # Step 6: Create and upload build artifacts
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: aria2-windows-build
-          path: build/
-
-      # Step 7: Clean up MSYS2
-      - name: Clean up MSYS2
-        run: |
-          C:\msys64\usr\bin\bash.exe -c "pacman -Rns --noconfirm base-devel mingw-w64-x86_64-toolchain"
-          choco uninstall msys2 -y
+    runs-on: ubuntu-latest
+    steps: 
+    - name: get source
+      run: |
+        wget -O Dockerfile https://github.com/aria2/aria2/raw/master/Dockerfile.mingw
+    - name: create image
+      run: |
+        docker build -t a2w:x64 .
+    - name: get aria
+      run: |
+        docker run -d --name cpa2w a2w:x64 /bin/bash
+        docker cp cpa2w:/aria2/src/aria2c.exe .
+    - name: Upload artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: aria
+        path: ./aria2c.exe
