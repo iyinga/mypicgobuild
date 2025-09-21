@@ -7,7 +7,7 @@ jobs:
     - name: get source
       run: |
         wget -O Dockerfile https://github.com/aria2/aria2/raw/master/Dockerfile.mingw
-        sed 's/i686-w64-mingw32/x86_64-w64-mingw32/g' Dockerfile
+        sed -i 's/i686-w64-mingw32/x86_64-w64-mingw32/g' Dockerfile
     - name: create image
       run: |
         docker build -t aria2-mingw .
