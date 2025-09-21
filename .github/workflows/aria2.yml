@@ -53,7 +53,7 @@ jobs:
         make -j$(nproc)
 
     - name: Upload binary
-      uses: actions/upload-artifact@vmaster
+      uses: actions/upload-artifact@v4
       with:
         name: aria2-windows-openssl
         path: aria2/src/aria2c.exe
