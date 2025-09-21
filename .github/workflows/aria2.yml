@@ -1,56 +1,73 @@
-name: Build aria2 for Windows with full features
+name: Build aria2 for Windows with Features
 
 on:
   workflow_dispatch:
+    
 
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v4
 
-    - name: Install MSYS2 and dependencies
-      uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          base-devel
-          git
-          autoconf
-          automake
-          libtool
-          pkg-config
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-openssl
-          mingw-w64-x86_64-libxml2
-          mingw-w64-x86_64-libssh2
-          mingw-w64-x86_64-c-ares
-          mingw-w64-x86_64-zlib
+      # Step 1: Checkout aria2 source code from GitHub
+      - name: Checkout aria2 repository
+        uses: actions/checkout@v4
+        with:
+          repository: aria2/aria2
 
-    - name: Build aria2 with full features
-      shell: msys2 {0}
-      run: |
-        git clone https://github.com/aria2/aria2.git
-        cd aria2
-        autoreconf -i
-        ./configure \
-          --host=x86_64-w64-mingw32 \
-          --enable-static \
-          --disable-shared \
-          --with-ssl=openssl \
-          --with-libxml2 \
-          --with-libssh2 \
-          --with-cares \
-          --enable-bittorrent \
-          --enable-metalink \
-          --enable-rpc
-        make -j$(nproc)
+      # Step 2: Set up MSYS2
+      - name: Set up MSYS2
+        run: |
+          choco install msys2 --no-progress -y
+          refreshenv
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel mingw-w64-x86_64-toolchain
 
-    - name: Upload aria2c.exe
-      uses: actions/upload-artifact@v4
-      with:
-        name: aria2-windows-full
-        path: aria2/src/
+      # Step 3: Install dependencies for aria2 features
+      - name: Install dependencies
+        run: |
+          pacman -S --noconfirm libxml2 zlib curl libssh2 openssl
+          pacman -S --noconfirm libgcrypt gmp boost boost-libs
+          pacman -S --noconfirm libtorrent-rasterbar
+          pacman -S --noconfirm libmetalink
+
+      # Step 4: Cache dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            C:\msys64\var\cache\pacman\pkg
+            C:\msys64\usr\local\mingw64
+          key: ${{ runner.os }}-aria2-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-aria2-
+
+      # Step 5: Build aria2 with required features
+      - name: Build aria2
+        run: |
+          # Create build directory
+          mkdir build
+          cd build
+          
+          # Configure CMake to enable features: openssl, bittorrent, metalink, rpc
+          cmake .. -G "MSYS Makefiles" \
+            -DENABLE_SSL=ON \
+            -DENABLE_BITTORRENT=ON \
+            -DENABLE_METALINK=ON \
+            -DENABLE_RPC=ON
+
+          # Start the build process
+          make -j$(nproc)
+
+      # Step 6: Create and upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: aria2-windows-build
+          path: build/
+
+      # Step 7: Clean up MSYS2
+      - name: Clean up MSYS2
+        run: |
+          pacman -Rns --noconfirm base-devel mingw-w64-x86_64-toolchain
+          choco uninstall msys2 -y
