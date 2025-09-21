@@ -1,24 +1,38 @@
-name: Build Aria
-on: [workflow_dispatch]
+name: Build aria2 on Windows with OpenSSL
+
+on:
+  workflow_dispatch:
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps: 
-    - name: get source
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Install Chocolatey and dependencies
       run: |
-        wget -O Dockerfile https://github.com/aria2/aria2/raw/master/Dockerfile.mingw
-        sed -i 's/i686-w64-mingw32/x86_64-w64-mingw32/g' Dockerfile
-        cat Dockerfile
-    - name: create image
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        choco install -y make autoconf automake libtool pkgconfig openssl strawberryperl git
+
+    - name: Clone aria2 and prepare build
       run: |
-        docker build -t aria2-mingw .
-    - name: get aria
+        git clone https://github.com/aria2/aria2.git
+        cd aria2
+        git submodule update --init
+        autoreconf -i
+
+    - name: Configure build with OpenSSL
       run: |
-        docker run --rm -v $PWD:/out aria2-mingw cp /aria2/src/aria2c.exe /out
-        #docker run -d --name cpa2w a2w:x64 /bin/bash
-        #docker cp cpa2w:/aria2/src/aria2c.exe .
-    - name: Upload artifact
+        cd aria2
+        ./configure --with-openssl --without-gnutls --enable-static=yes --enable-shared=no
+
+    - name: Build aria2
+      run: |
+        cd aria2
+        make -j2
+
+    - name: Upload binary
       uses: actions/upload-artifact@master
       with:
-        name: aria
-        path: ./aria2c.exe
+        name: aria2-windows-openssl
+        path: aria2/src/aria2c.exe
