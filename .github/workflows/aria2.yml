@@ -1,0 +1,56 @@
+name: Build aria2 for Windows with full features
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    - name: Install MSYS2 and dependencies
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          base-devel
+          git
+          autoconf
+          automake
+          libtool
+          pkg-config
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-libxml2
+          mingw-w64-x86_64-libssh2
+          mingw-w64-x86_64-c-ares
+          mingw-w64-x86_64-zlib
+
+    - name: Build aria2 with full features
+      shell: msys2 {0}
+      run: |
+        git clone https://github.com/aria2/aria2.git
+        cd aria2
+        autoreconf -i
+        ./configure \
+          --host=x86_64-w64-mingw32 \
+          --enable-static \
+          --disable-shared \
+          --with-ssl=openssl \
+          --with-libxml2 \
+          --with-libssh2 \
+          --with-cares \
+          --enable-bittorrent \
+          --enable-metalink \
+          --enable-rpc
+        make -j$(nproc)
+
+    - name: Upload aria2c.exe
+      uses: actions/upload-artifact@v4
+      with:
+        name: aria2-windows-full
+        path: aria2/src/
