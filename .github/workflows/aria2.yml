@@ -33,7 +33,7 @@ jobs:
 
       # Step 4: Cache dependencies
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             C:\msys64\var\cache\pacman\pkg
@@ -61,7 +61,7 @@ jobs:
 
       # Step 6: Create and upload build artifacts
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: aria2-windows-build
           path: build/
