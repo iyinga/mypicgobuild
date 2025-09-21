@@ -40,23 +40,24 @@ jobs:
       shell: msys2 {0}
       run: |
         cd aria2
-        ./configure \
-          --host=x86_64-w64-mingw32 \
-          --with-openssl \
-          --without-gnutls \
-          --enable-static=yes \
-          --enable-shared=no \
-          --disable-websocket \
-          --without-libxml2 \
-          --without-libssh2 \
-          --without-sqlite3 \
-          --without-cares
+        CFLAGS="-O2 -s" ./configure \
+        --host=x86_64-w64-mingw32 \
+        --with-openssl \
+        --without-gnutls \
+        --enable-static=yes \
+        --enable-shared=no \
+        --disable-websocket \
+        --without-libxml2 \
+        --without-libssh2 \
+        --without-sqlite3 \
+        --without-cares
 
     - name: Build aria2
       shell: msys2 {0}
       run: |
         cd aria2
         make -j$(nproc)
+        strip src/aria2c.exe
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
