@@ -13,7 +13,7 @@ jobs:
         docker build -t aria2-mingw .
     - name: get aria
       run: |
-        docker run --rm -it -v ./:/out aria2-mingw cp /aria2/src/aria2c.exe /out
+        docker run --rm -v ./:/out aria2-mingw cp /aria2/src/aria2c.exe /out
         #docker run -d --name cpa2w a2w:x64 /bin/bash
         #docker cp cpa2w:/aria2/src/aria2c.exe .
     - name: Upload artifact
