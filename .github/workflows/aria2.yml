@@ -20,16 +20,17 @@ jobs:
         run: |
           choco install msys2 --no-progress -y
           refreshenv
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel mingw-w64-x86_64-toolchain
+          # Ensure pacman is available and update MSYS2
+          C:\msys64\usr\bin\bash.exe -c "pacman -Syu --noconfirm"
+          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm base-devel mingw-w64-x86_64-toolchain"
 
       # Step 3: Install dependencies for aria2 features
       - name: Install dependencies
         run: |
-          pacman -S --noconfirm libxml2 zlib curl libssh2 openssl
-          pacman -S --noconfirm libgcrypt gmp boost boost-libs
-          pacman -S --noconfirm libtorrent-rasterbar
-          pacman -S --noconfirm libmetalink
+          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libxml2 zlib curl libssh2 openssl"
+          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libgcrypt gmp boost boost-libs"
+          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libtorrent-rasterbar"
+          C:\msys64\usr\bin\bash.exe -c "pacman -S --noconfirm libmetalink"
 
       # Step 4: Cache dependencies
       - name: Cache dependencies
@@ -50,14 +51,10 @@ jobs:
           cd build
           
           # Configure CMake to enable features: openssl, bittorrent, metalink, rpc
-          cmake .. -G "MSYS Makefiles" \
-            -DENABLE_SSL=ON \
-            -DENABLE_BITTORRENT=ON \
-            -DENABLE_METALINK=ON \
-            -DENABLE_RPC=ON
+          C:\msys64\usr\bin\bash.exe -c "cmake .. -G 'MSYS Makefiles' -DENABLE_SSL=ON -DENABLE_BITTORRENT=ON -DENABLE_METALINK=ON -DENABLE_RPC=ON"
 
           # Start the build process
-          make -j$(nproc)
+          C:\msys64\usr\bin\bash.exe -c "make -j$(nproc)"
 
       # Step 6: Create and upload build artifacts
       - name: Upload build artifacts
@@ -69,5 +66,5 @@ jobs:
       # Step 7: Clean up MSYS2
       - name: Clean up MSYS2
         run: |
-          pacman -Rns --noconfirm base-devel mingw-w64-x86_64-toolchain
+          C:\msys64\usr\bin\bash.exe -c "pacman -Rns --noconfirm base-devel mingw-w64-x86_64-toolchain"
           choco uninstall msys2 -y
