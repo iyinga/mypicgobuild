@@ -1,38 +1,59 @@
-name: Build aria2 on Windows with OpenSSL
+name: Build aria2 on Windows with OpenSSL via MSYS2
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build:
     runs-on: windows-latest
 
     steps:
-    - name: Install Chocolatey and dependencies
-      run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        choco install -y make autoconf automake libtool pkgconfig openssl strawberryperl git
+    - name: Install MSYS2
+      uses: msys2/setup-msys2@master
+      with:
+        update: true
+        install: >-
+          git
+          make
+          autoconf
+          automake
+          libtool
+          pkg-config
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-libxml2
+          mingw-w64-x86_64-sqlite3
+          mingw-w64-x86_64-libssh2
+          mingw-w64-x86_64-zlib
+          mingw-w64-x86_64-cppunit
 
-    - name: Clone aria2 and prepare build
+    - name: Clone aria2
+      shell: msys2 {0}
       run: |
         git clone https://github.com/aria2/aria2.git
         cd aria2
         git submodule update --init
         autoreconf -i
 
-    - name: Configure build with OpenSSL
+    - name: Configure build
+      shell: msys2 {0}
       run: |
         cd aria2
-        ./configure --with-openssl --without-gnutls --enable-static=yes --enable-shared=no
+        ./configure \
+          --host=x86_64-w64-mingw32 \
+          --with-openssl \
+          --without-gnutls \
+          --enable-static=yes \
+          --enable-shared=no
 
     - name: Build aria2
+      shell: msys2 {0}
       run: |
         cd aria2
-        make -j2
+        make -j$(nproc)
 
     - name: Upload binary
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@vmaster
       with:
         name: aria2-windows-openssl
         path: aria2/src/aria2c.exe
