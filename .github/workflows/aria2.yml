@@ -1,4 +1,4 @@
-name: Build aria2 on Windows with OpenSSL via MSYS2
+name: Build aria2 on Windows with OpenSSL
 
 on:
   workflow_dispatch:
@@ -19,6 +19,7 @@ jobs:
           automake
           libtool
           pkg-config
+          gettext-devel
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-openssl
           mingw-w64-x86_64-libxml2
@@ -27,7 +28,7 @@ jobs:
           mingw-w64-x86_64-zlib
           mingw-w64-x86_64-cppunit
 
-    - name: Clone aria2
+    - name: Clone aria2 source
       shell: msys2 {0}
       run: |
         git clone https://github.com/aria2/aria2.git
@@ -44,7 +45,12 @@ jobs:
           --with-openssl \
           --without-gnutls \
           --enable-static=yes \
-          --enable-shared=no
+          --enable-shared=no \
+          --disable-websocket \
+          --without-libxml2 \
+          --without-libssh2 \
+          --without-sqlite3 \
+          --without-cares
 
     - name: Build aria2
       shell: msys2 {0}
