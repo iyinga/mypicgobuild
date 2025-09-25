@@ -29,6 +29,7 @@ jobs:
         choco install make -y
         choco install nasm -y
         echo "C:\ProgramData\chocolatey\bin" | Out-File -Append $env:GITHUB_PATH
+        echo "C:\Program Files\NASM" | Out-File -Append $env:GITHUB_PATH
 
     - name: Setup MSVC environment
       uses: ilammy/msvc-dev-cmd@v1
