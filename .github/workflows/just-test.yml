@@ -14,6 +14,8 @@ jobs:
       OQSPROV_DIR: C:/oqs-provider
 
     steps:
+    - name: Checkout aria2
+      uses: actions/checkout@v4
 
 
     - name: Install dependencies
@@ -24,12 +26,14 @@ jobs:
         choco install winflexbison -y
         choco install make -y
 
+    - name: Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
 
 
 
     - name: Build OpenSSL (master) with jom
       run: |
-        git clone https://github.com/openssl/openssl.git
+        git clone --branch openssl-3.5.3 https://github.com/openssl/openssl.git
         cd openssl
         perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
         jom -j4
