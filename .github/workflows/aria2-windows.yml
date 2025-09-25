@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     env:
       OPENSSL_DIR: C:/oqs-openssl
@@ -38,16 +38,18 @@ jobs:
         mkdir build
         cd build
         cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.LIBOQS_DIR }} ..
-        ninja
+        ninja -j4
         ninja install
 
-    - name: Build OpenSSL (master)
+    - name: Build OpenSSL (master) with Ninja
       run: |
         git clone --branch openssl-3.5.3 https://github.com/openssl/openssl.git
         cd openssl
-        perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
-        nmake
-        nmake install
+        mkdir build
+        cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.OPENSSL_DIR }} ..
+        ninja -j4
+        ninja install
 
     - name: Build oqs-provider
       run: |
@@ -57,7 +59,7 @@ jobs:
               -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
               -Dliboqs_DIR=${{ env.LIBOQS_DIR }} `
               -DCMAKE_INSTALL_PREFIX=${{ env.OQSPROV_DIR }} .
-        ninja
+        ninja -j4
         ninja install
 
     - name: Build aria2
@@ -65,7 +67,7 @@ jobs:
       run: |
         autoreconf -i
         ./configure --with-openssl=${{ env.OPENSSL_DIR }} --without-gnutls --enable-static --disable-shared
-        make -j
+        make -j4
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
