@@ -58,6 +58,15 @@ jobs:
         ninja -j4
         ninja install
 
+    # - name: Install MSYS2 and autotools
+    #   run: |
+    #     choco install msys2 -y
+    #     echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
+    #     C:\tools\msys64\usr\bin\bash -lc "
+    #       pacman -Sy --noconfirm &&
+    #       pacman -S --noconfirm \
+    #         base-devel autoconf automake libtool make gcc pkg-config
+    #     "
     - name: Install MSYS2 and autotools
       run: |
         choco install msys2 -y
@@ -65,9 +74,10 @@ jobs:
         C:\tools\msys64\usr\bin\bash -lc "
           pacman -Sy --noconfirm &&
           pacman -S --noconfirm \
-            base-devel autoconf automake libtool make gcc pkg-config
+            base-devel autoconf automake libtool make gcc pkg-config \
+            gettext gettext-devel
         "
-    
+
     - name: Build aria2 with PQC OpenSSL
       run: |
         C:\tools\msys64\usr\bin\bash -lc "
