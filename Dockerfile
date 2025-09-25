@@ -30,10 +30,11 @@ WORKDIR /build/liboqs
 RUN git clone --recursive https://github.com/open-quantum-safe/liboqs.git .
 RUN mkdir build && cd build && \
   cmake -G Ninja .. \
-    -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-mingw64.cmake \
+    -DCMAKE_TOOLCHAIN_FILE=../.CMake/toolchain-mingw64.cmake \
     -DCMAKE_INSTALL_PREFIX=${PREFIX} \
     -DCMAKE_BUILD_TYPE=Release && \
   ninja && ninja install
+
 
 # 🔐 Build OpenSSL
 WORKDIR /build/openssl
