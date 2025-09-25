@@ -104,10 +104,18 @@ jobs:
         cd aria2
         CFLAGS="-O2 -s -D_FILE_OFFSET_BITS=64" ./configure \
         --host=x86_64-w64-mingw32 \
-        --with-openssl=C:/openssl-3.5.3 \
+        --with-openssl=/c/openssl-3.5.3 \
         --without-gnutls \
         --enable-static=yes \
-        --enable-shared=no
+        --enable-shared=no\
+        --disable-websocket \
+        --without-libxml2 \
+        --without-libssh2 \
+        --without-sqlite3 \
+        --without-cares \
+        CPPFLAGS="-I/c/openssl-3.5.3/include" \
+        LDFLAGS="-L/c/openssl-3.5.3/lib" \
+        PKG_CONFIG_PATH="/c/openssl-3.5.3/lib/pkgconfig"
     - name: Build aria2
       shell: msys2 {0}
       run: |
