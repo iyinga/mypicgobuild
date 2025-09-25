@@ -56,7 +56,7 @@ jobs:
         cd openssl
         perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
         nmake
-        nmake install
+        nmake install_sw
 
     - name: Build oqs-provider
       run: |
