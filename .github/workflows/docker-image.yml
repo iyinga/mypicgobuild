@@ -1,0 +1,32 @@
+name: Build aria2 Windows with PQ TLS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker image
+      run: |
+        docker build -t aria2-pq-win -f Dockerfile .
+
+    - name: Create output directory
+      run: mkdir -p output
+
+    - name: Run Docker container to extract build
+      run: |
+        docker run --rm -v ${{ github.workspace }}/output:/aria2-win aria2-pq-win
+
+    - name: Archive compiled binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: aria2-windows-pq
+        path: output/
