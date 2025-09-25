@@ -1,4 +1,4 @@
-name: Build Aria2 with PQC Support for Windows
+name: Build Aria2 with PQC Support via MSYS2
 
 on:
   workflow_dispatch:
@@ -8,11 +8,6 @@ jobs:
   build:
     runs-on: windows-2022
 
-    env:
-      OPENSSL_DIR: C:/oqs-openssl
-      LIBOQS_DIR: C:/liboqs
-      OQSPROV_DIR: C:/oqs-provider
-
     steps:
     - name: Checkout aria2
       uses: actions/checkout@v4
@@ -20,61 +15,66 @@ jobs:
         repository: aria2/aria2
         path: aria2
 
-    - name: Install dependencies
+    - name: Install MSYS2 and dependencies
       run: |
-        choco install strawberryperl -y
-        choco install python3 -y
-        choco install cmake ninja -y
-        choco install winflexbison -y
-        choco install make -y
-        choco install nasm -y
-        echo "C:\ProgramData\chocolatey\bin" | Out-File -Append $env:GITHUB_PATH
-        echo "C:\Program Files\NASM" | Out-File -Append $env:GITHUB_PATH
-
-    - name: Setup MSVC environment
-      uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Verify NASM
-      run: nasm -v
+        choco install msys2 -y
+        echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
+        C:\tools\msys64\usr\bin\bash -lc "
+          pacman -Sy --noconfirm &&
+          pacman -S --noconfirm \
+            base-devel git cmake ninja autoconf automake libtool \
+            perl gcc make pkg-config zlib zlib-devel \
+            libxml2 libxml2-devel sqlite sqlite-devel \
+            c-ares c-ares-devel
+        "
 
     - name: Build liboqs
       run: |
-        git clone --recursive https://github.com/open-quantum-safe/liboqs.git
-        cd liboqs
-        mkdir build
-        cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.LIBOQS_DIR }} ..
-        ninja -j4
-        ninja install
+        C:\tools\msys64\usr\bin\bash -lc "
+          git clone --recursive https://github.com/open-quantum-safe/liboqs.git &&
+          cd liboqs &&
+          mkdir build && cd build &&
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
+          ninja -j$(nproc) && ninja install
+        "
 
-    - name: Build OpenSSL (master)
+    - name: Build OpenSSL (official)
       run: |
-        git clone https://github.com/openssl/openssl.git
-        cd openssl
-        perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
-        nmake
-        nmake install_sw
+        C:\tools\msys64\usr\bin\bash -lc "
+          git clone https://github.com/openssl/openssl.git &&
+          cd openssl &&
+          git checkout openssl-3.5.3 &&
+          ./Configure linux-generic64 no-shared --prefix=/usr/local/openssl &&
+          make -j$(nproc) && make install_sw
+        "
 
     - name: Build oqs-provider
       run: |
-        git clone https://github.com/open-quantum-safe/oqs-provider.git
-        cd oqs-provider
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
-              -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
-              -Dliboqs_DIR=${{ env.LIBOQS_DIR }} `
-              -DCMAKE_INSTALL_PREFIX=${{ env.OQSPROV_DIR }} .
-        ninja -j4
-        ninja install
+        C:\tools\msys64\usr\bin\bash -lc "
+          git clone https://github.com/open-quantum-safe/oqs-provider.git &&
+          cd oqs-provider &&
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DOPENSSL_ROOT_DIR=/usr/local/openssl \
+            -Dliboqs_DIR=/usr/local/lib/cmake/liboqs \
+            -DCMAKE_INSTALL_PREFIX=/usr/local/oqs-provider .
+          ninja -j$(nproc) && ninja install
+        "
 
     - name: Build aria2
-      working-directory: ${{ github.workspace }}/aria2
       run: |
-        autoreconf -i
-        ./configure --with-openssl=${{ env.OPENSSL_DIR }} --without-gnutls --enable-static --disable-shared
-        make -j4
+        C:\tools\msys64\usr\bin\bash -lc "
+          cd aria2 &&
+          autoreconf -i &&
+          ./configure \
+            --with-openssl=/usr/local/openssl \
+            --without-gnutls \
+            --enable-static \
+            --disable-shared &&
+          make -j$(nproc)
+        "
 
-    - name: Upload artifact
+    - name: Upload aria2 binary
       uses: actions/upload-artifact@v4
       with:
-        name: aria2-pqc-windows
-        path: ${{ github.workspace }}/aria2/src/aria2c.exe
+        name: aria2-pqc-msys2
+        path: aria2/src/aria2c.exe
