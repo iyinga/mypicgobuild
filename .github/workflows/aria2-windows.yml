@@ -1,4 +1,4 @@
-name: Build Aria2 with PQC Support via MSYS2
+name: Build Aria2 with PQC Support on Windows
 
 on:
   workflow_dispatch:
@@ -8,6 +8,11 @@ jobs:
   build:
     runs-on: windows-2022
 
+    env:
+      LIBOQS_DIR: C:\liboqs
+      OPENSSL_DIR: C:\openssl-3.5.3
+      OQSPROV_DIR: C:\oqs-provider
+
     steps:
     - name: Checkout aria2
       uses: actions/checkout@v4
@@ -15,69 +20,65 @@ jobs:
         repository: aria2/aria2
         path: aria2
 
-    - name: Install MSYS2 and dependencies
+    - name: Install dependencies
       run: |
-        choco install msys2 -y
-        echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
-        C:\tools\msys64\mingw64.exe bash -lc "
-          pacman -Sy --noconfirm &&
-          pacman -S --noconfirm \
-            git make cmake ninja autoconf automake libtool \
-            mingw-w64-x86_64-gcc \
-            mingw-w64-x86_64-pkg-config \
-            mingw-w64-x86_64-zlib \
-            mingw-w64-x86_64-libxml2 \
-            mingw-w64-x86_64-sqlite \
-            mingw-w64-x86_64-c-ares
-        "
+        choco install cmake ninja strawberryperl nasm -y
+        echo "C:\Program Files\NASM" | Out-File -Append $env:GITHUB_PATH
 
     - name: Build liboqs
       run: |
-        C:\tools\msys64\mingw64.exe bash -lc "
-          git clone --recursive https://github.com/open-quantum-safe/liboqs.git &&
-          cd liboqs &&
-          mkdir build && cd build &&
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64/usr/local ..
-          ninja -j$(nproc) && ninja install
-        "
+        git clone --recursive https://github.com/open-quantum-safe/liboqs.git
+        cd liboqs
+        mkdir build && cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.LIBOQS_DIR }} ..
+        ninja -j4
+        ninja install
 
     - name: Build OpenSSL 3.5.3
       run: |
-        C:\tools\msys64\mingw64.exe bash -lc "
-          git clone https://github.com/openssl/openssl.git &&
-          cd openssl &&
-          git checkout openssl-3.5.3 &&
-          ./Configure mingw64 no-shared --prefix=/mingw64/usr/local/openssl-3.5.3 &&
-          make -j$(nproc) && make install_sw
-        "
+        git clone https://github.com/openssl/openssl.git
+        cd openssl
+        git checkout openssl-3.5.3
+        perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
+        nmake
+        nmake install_sw
 
     - name: Build oqs-provider
       run: |
-        C:\tools\msys64\mingw64.exe bash -lc "
-          git clone https://github.com/open-quantum-safe/oqs-provider.git &&
-          cd oqs-provider &&
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DOPENSSL_ROOT_DIR=/mingw64/usr/local/openssl-3.5.3 \
-            -Dliboqs_DIR=/mingw64/usr/local/lib/cmake/liboqs \
-            -DCMAKE_INSTALL_PREFIX=/mingw64/usr/local/oqs-provider .
-          ninja -j$(nproc) && ninja install
+        git clone https://github.com/open-quantum-safe/oqs-provider.git
+        cd oqs-provider
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
+          -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
+          -Dliboqs_DIR=${{ env.LIBOQS_DIR }} `
+          -DCMAKE_INSTALL_PREFIX=${{ env.OQSPROV_DIR }} .
+        ninja -j4
+        ninja install
+
+    - name: Install MSYS2 and autotools
+      run: |
+        choco install msys2 -y
+        echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
+        C:\tools\msys64\usr\bin\bash -lc "
+          pacman -Sy --noconfirm &&
+          pacman -S --noconfirm \
+            base-devel autoconf automake libtool make gcc pkg-config
         "
 
-    - name: Build aria2
+    - name: Build aria2 with PQC OpenSSL
       run: |
-        C:\tools\msys64\mingw64.exe bash -lc "
+        C:\tools\msys64\usr\bin\bash -lc "
           cd aria2 &&
           autoreconf -i &&
           ./configure \
-            --with-openssl=/mingw64/usr/local/openssl-3.5.3 \
+            --with-openssl=${{ env.OPENSSL_DIR }} \
             --without-gnutls \
             --enable-static \
             --disable-shared &&
-          make -j$(nproc)
+          make -j4
         "
 
     - name: Upload aria2 binary
       uses: actions/upload-artifact@v4
       with:
-        name: aria2-pqc-msys2
+        name: aria2-pqc-windows
         path: aria2/src/aria2c.exe
