@@ -24,10 +24,8 @@ jobs:
         choco install winflexbison -y
         choco install make -y
 
-    - name: Setup MSVC environment
-      uses: ilammy/msvc-dev-cmd@v1
 
-        ninja install
+
 
     - name: Build OpenSSL (master) with jom
       run: |
