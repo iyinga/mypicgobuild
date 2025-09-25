@@ -12,7 +12,6 @@ jobs:
       OPENSSL_DIR: C:/oqs-openssl
       LIBOQS_DIR: C:/liboqs
       OQSPROV_DIR: C:/oqs-provider
-      ARIA2_DIR: C:/aria2
 
     steps:
     - name: Checkout aria2
@@ -36,7 +35,8 @@ jobs:
       run: |
         git clone --recursive https://github.com/open-quantum-safe/liboqs.git
         cd liboqs
-        mkdir build && cd build
+        mkdir build
+        cd build
         cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.LIBOQS_DIR }} ..
         ninja
         ninja install
@@ -61,8 +61,8 @@ jobs:
         ninja install
 
     - name: Build aria2
+      working-directory: ${{ github.workspace }}/aria2
       run: |
-        cd ${{ env.ARIA2_DIR }}
         autoreconf -i
         ./configure --with-openssl=${{ env.OPENSSL_DIR }} --without-gnutls --enable-static --disable-shared
         make -j
@@ -71,4 +71,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: aria2-pqc-windows
-        path: ${{ env.ARIA2_DIR }}/src/aria2c.exe
+        path: ${{ github.workspace }}/aria2/src/aria2c.exe
