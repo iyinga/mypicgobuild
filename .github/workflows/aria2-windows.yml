@@ -1,17 +1,18 @@
-name: Build Aria2 with PQC for Windows
+name: Build Aria2 with PQC Support for Windows
 
 on:
   workflow_dispatch:
+
 
 jobs:
   build:
     runs-on: windows-latest
 
     env:
-      OPENSSL_DIR: C:\oqs-openssl
-      LIBOQS_DIR: C:\liboqs
-      OQSPROV_DIR: C:\oqs-provider
-      ARIA2_DIR: C:\aria2
+      OPENSSL_DIR: C:/oqs-openssl
+      LIBOQS_DIR: C:/liboqs
+      OQSPROV_DIR: C:/oqs-provider
+      ARIA2_DIR: C:/aria2
 
     steps:
     - name: Checkout aria2
@@ -28,12 +29,15 @@ jobs:
         choco install winflexbison -y
         choco install make -y
 
+    - name: Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Build liboqs
       run: |
         git clone --recursive https://github.com/open-quantum-safe/liboqs.git
         cd liboqs
         mkdir build && cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%LIBOQS_DIR% ..
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.LIBOQS_DIR }} ..
         ninja
         ninja install
 
@@ -41,7 +45,7 @@ jobs:
       run: |
         git clone --branch openssl-3.5.3 https://github.com/openssl/openssl.git
         cd openssl
-        perl Configure VC-WIN64A no-shared --prefix=%OPENSSL_DIR%
+        perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
         nmake
         nmake install
 
@@ -49,18 +53,18 @@ jobs:
       run: |
         git clone https://github.com/open-quantum-safe/oqs-provider.git
         cd oqs-provider
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ^
-              -DOPENSSL_ROOT_DIR=%OPENSSL_DIR% ^
-              -Dliboqs_DIR=%LIBOQS_DIR% ^
-              -DCMAKE_INSTALL_PREFIX=%OQSPROV_DIR% .
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
+              -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
+              -Dliboqs_DIR=${{ env.LIBOQS_DIR }} `
+              -DCMAKE_INSTALL_PREFIX=${{ env.OQSPROV_DIR }} .
         ninja
         ninja install
 
     - name: Build aria2
       run: |
-        cd %ARIA2_DIR%
+        cd ${{ env.ARIA2_DIR }}
         autoreconf -i
-        ./configure --with-openssl=%OPENSSL_DIR% --without-gnutls --enable-static --disable-shared
+        ./configure --with-openssl=${{ env.OPENSSL_DIR }} --without-gnutls --enable-static --disable-shared
         make -j
 
     - name: Upload artifact
