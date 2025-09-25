@@ -27,6 +27,7 @@ jobs:
         choco install cmake ninja nasm -y
         choco install winflexbison -y
         choco install make -y
+        echo "C:\ProgramData\chocolatey\bin" | Out-File -Append $env:GITHUB_PATH
 
     - name: Setup MSVC environment
       uses: ilammy/msvc-dev-cmd@v1
