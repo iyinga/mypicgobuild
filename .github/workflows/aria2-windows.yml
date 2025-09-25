@@ -1,4 +1,4 @@
-name: Build Aria2 with PQC Support on Windows
+name: Build Aria2 with PQC Support via CMake
 
 on:
   workflow_dispatch:
@@ -20,14 +20,13 @@ jobs:
         repository: aria2/aria2
         path: aria2
 
+    - name: Set up MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Install dependencies
       run: |
         choco install cmake ninja strawberryperl nasm -y
         echo "C:\Program Files\NASM" | Out-File -Append $env:GITHUB_PATH
-
-    - name: Set up MSVC environment
-      uses: ilammy/msvc-dev-cmd@v1
-
 
     - name: Build liboqs
       run: |
@@ -58,41 +57,22 @@ jobs:
         ninja -j4
         ninja install
 
-    # - name: Install MSYS2 and autotools
-    #   run: |
-    #     choco install msys2 -y
-    #     echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
-    #     C:\tools\msys64\usr\bin\bash -lc "
-    #       pacman -Sy --noconfirm &&
-    #       pacman -S --noconfirm \
-    #         base-devel autoconf automake libtool make gcc pkg-config
-    #     "
-    - name: Install MSYS2 and autotools
+    - name: Build aria2 with CMake
       run: |
-        choco install msys2 -y
-        echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
-        C:\tools\msys64\usr\bin\bash -lc "
-          pacman -Sy --noconfirm &&
-          pacman -S --noconfirm \
-            base-devel autoconf automake libtool make gcc pkg-config \
-            gettext gettext-devel
-        "
-
-    - name: Build aria2 with PQC OpenSSL
-      run: |
-        C:\tools\msys64\usr\bin\bash -lc "
-          cd '${{ github.workspace }}/aria2' &&
-          autoreconf -i &&
-          ./configure \
-            --with-openssl=C:/openssl-3.5.3 \
-            --without-gnutls \
-            --enable-static \
-            --disable-shared &&
-          make -j4
-        "
+        cd aria2
+        mkdir build && cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
+          -DENABLE_STATIC=yes `
+          -DENABLE_SHARED=no `
+          -DENABLE_SSL=yes `
+          -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
+          -DOPENSSL_INCLUDE_DIR=${{ env.OPENSSL_DIR }}/include `
+          -DOPENSSL_LIBRARIES=${{ env.OPENSSL_DIR }}/lib `
+          ..
+        ninja -j4
 
     - name: Upload aria2 binary
       uses: actions/upload-artifact@v4
       with:
-        name: aria2-pqc-windows
-        path: aria2/src/aria2c.exe
+        name: aria2-pqc-cmake
+        path: aria2/build/aria2c.exe
