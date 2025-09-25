@@ -16,17 +16,22 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t aria2-pq-win -f Dockerfile .
+        #docker build -t aria2-pq-win -f Dockerfile .
+        docker build -t aria2-win-pqc .
+        docker create --name extract aria2-win-pqc
+        docker cp extract:/aria2c.exe ./aria2c.exe
+        docker rm extract
 
-    - name: Create output directory
-      run: mkdir -p output
 
-    - name: Run Docker container to extract build
-      run: |
-        docker run --rm -v ${{ github.workspace }}/output:/aria2-win aria2-pq-win
+    # - name: Create output directory
+    #   run: mkdir -p output
+
+    # - name: Run Docker container to extract build
+    #   run: |
+    #     docker run --rm -v ${{ github.workspace }}/output:/aria2-win aria2-pq-win
 
     - name: Archive compiled binaries
       uses: actions/upload-artifact@v4
       with:
         name: aria2-windows-pq
-        path: output/
+        path: ./*.exe
