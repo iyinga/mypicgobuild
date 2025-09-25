@@ -41,15 +41,22 @@ jobs:
         ninja -j4
         ninja install
 
-    - name: Build OpenSSL (master) with Ninja
+    # - name: Build OpenSSL (master) with Ninja
+    #   run: |
+    #     git clone --branch openssl-3.5.3 https://github.com/openssl/openssl.git
+    #     cd openssl
+    #     mkdir build
+    #     cd build
+    #     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.OPENSSL_DIR }} ..
+    #     ninja -j4
+    #     ninja install
+    - name: Build OpenSSL (master)
       run: |
         git clone --branch openssl-3.5.3 https://github.com/openssl/openssl.git
         cd openssl
-        mkdir build
-        cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.OPENSSL_DIR }} ..
-        ninja -j4
-        ninja install
+        perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
+        nmake
+        nmake install
 
     - name: Build oqs-provider
       run: |
