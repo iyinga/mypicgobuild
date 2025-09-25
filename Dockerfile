@@ -8,9 +8,9 @@ RUN apt update && apt install -y \
     autoconf automake libtool make g++ git \
     mingw-w64 cmake perl python3 \
     pkg-config zlib1g-dev libxml2-dev libcppunit-dev \
-    libssl-dev ca-certificates curl unzip
+    libssl-dev ca-certificates curl unzip ninja-build
 
-# 可选：升级 CMake（Ubuntu 22.04 默认版本较旧）
+# 升级 CMake（Ubuntu 默认版本过旧）
 RUN curl -LO https://github.com/Kitware/CMake/releases/download/v3.27.7/cmake-3.27.7-linux-x86_64.sh && \
     chmod +x cmake-3.27.7-linux-x86_64.sh && \
     ./cmake-3.27.7-linux-x86_64.sh --skip-license --prefix=/usr/local
@@ -24,27 +24,36 @@ ENV STRIP=${HOST}-strip
 
 WORKDIR /build
 
-# 下载并编译 liboqs（包含子模块）
-RUN git clone --recursive --branch main https://github.com/open-quantum-safe/liboqs.git && \
+# 编译 liboqs（使用官方工具链）
+RUN git clone https://github.com/open-quantum-safe/liboqs.git && \
     cd liboqs && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr/local/oqs -DBUILD_SHARED_LIBS=ON . && \
-    make -j$(nproc) && make install
+    mkdir build && cd build && \
+    cmake -GNinja \
+          -DCMAKE_TOOLCHAIN_FILE=../.CMake/toolchain_windows-amd64.cmake \
+          -DOQS_DIST_BUILD=ON \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DCMAKE_INSTALL_PREFIX=/usr/${HOST} .. && \
+    ninja && ninja install
 
-# 下载并编译 OpenSSL 3（主分支）
+# 编译 OpenSSL 3（静态链接 liboqs）
 RUN git clone --branch master https://github.com/openssl/openssl.git && \
     cd openssl && \
-    ./Configure mingw64 no-shared --cross-compile-prefix=${HOST}- --prefix=/usr/${HOST} && \
+    ./Configure mingw64 no-shared --cross-compile-prefix=${HOST}- \
+        --with-liboqs=/usr/${HOST} \
+        --prefix=/usr/${HOST} && \
     make -j$(nproc) && make install_sw
 
-# 下载并编译 oqs-provider（OpenSSL 3 插件）
+# 编译 oqs-provider（链接 OpenSSL 和 liboqs）
 RUN git clone --branch main https://github.com/open-quantum-safe/oqs-provider.git && \
     cd oqs-provider && \
-    cmake -DOQS_PROVIDER_OPENSSL_DIR=/usr/${HOST} \
-          -DCMAKE_INSTALL_PREFIX=/usr/${HOST} \
-          -DOQS_PROVIDER_LIBOQS_DIR=/usr/local/oqs . && \
-    make -j$(nproc) && make install
+    cmake -GNinja \
+          -DOQS_PROVIDER_OPENSSL_DIR=/usr/${HOST} \
+          -DOQS_PROVIDER_LIBOQS_DIR=/usr/${HOST} \
+          -DCMAKE_TOOLCHAIN_FILE=../liboqs/.CMake/toolchain_windows-amd64.cmake \
+          -DCMAKE_INSTALL_PREFIX=/usr/${HOST} . && \
+    ninja && ninja install
 
-# 下载并编译 aria2（使用 OpenSSL + oqs-provider）
+# 编译 aria2（使用 OpenSSL + oqs-provider）
 RUN git clone https://github.com/aria2/aria2.git && \
     cd aria2 && \
     autoreconf -i && \
