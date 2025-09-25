@@ -1,0 +1,41 @@
+name: just test
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    env:
+      OPENSSL_DIR: C:/oqs-openssl
+      LIBOQS_DIR: C:/liboqs
+      OQSPROV_DIR: C:/oqs-provider
+
+    steps:
+
+
+    - name: Install dependencies
+      run: |
+        choco install strawberryperl -y
+        choco install python3 -y
+        choco install cmake ninja jom -y
+        choco install winflexbison -y
+        choco install make -y
+
+    - name: Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
+
+        ninja install
+
+    - name: Build OpenSSL (master) with jom
+      run: |
+        git clone https://github.com/openssl/openssl.git
+        cd openssl
+        perl Configure VC-WIN64A no-shared --prefix=${{ env.OPENSSL_DIR }}
+        jom -j4
+        jom install_sw
+
+
+
