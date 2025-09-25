@@ -16,9 +16,9 @@ jobs:
     steps:
     - name: Checkout aria2
       uses: actions/checkout@v4
-      with:
-        repository: aria2/aria2
-        path: aria2
+      # with:
+      #   repository: aria2/aria2
+      #   path: aria2
 
     - name: Set up MSVC environment
       uses: ilammy/msvc-dev-cmd@v1
@@ -57,22 +57,77 @@ jobs:
         ninja -j4
         ninja install
 
-    - name: Build aria2 with CMake
+    # - name: Build aria2 with CMake
+    #   run: |
+    #     cd aria2
+    #     mkdir build && cd build
+    #     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
+    #       -DENABLE_STATIC=yes `
+    #       -DENABLE_SHARED=no `
+    #       -DENABLE_SSL=yes `
+    #       -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
+    #       -DOPENSSL_INCLUDE_DIR=${{ env.OPENSSL_DIR }}/include `
+    #       -DOPENSSL_LIBRARIES=${{ env.OPENSSL_DIR }}/lib `
+    #       ..
+    #     ninja -j4
+
+
+    - name: Install MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          git
+          make
+          autoconf
+          automake
+          libtool
+          pkg-config
+          gettext-devel
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-libxml2
+          mingw-w64-x86_64-sqlite3
+          mingw-w64-x86_64-libssh2
+          mingw-w64-x86_64-zlib
+          mingw-w64-x86_64-cppunit
+    - name: Clone aria2 source
+      shell: msys2 {0}
+      run: |
+        git clone https://github.com/aria2/aria2.git
+        cd aria2
+        git submodule update --init
+        autoreconf -i
+    - name: Configure build
+      shell: msys2 {0}
       run: |
         cd aria2
-        mkdir build && cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release `
-          -DENABLE_STATIC=yes `
-          -DENABLE_SHARED=no `
-          -DENABLE_SSL=yes `
-          -DOPENSSL_ROOT_DIR=${{ env.OPENSSL_DIR }} `
-          -DOPENSSL_INCLUDE_DIR=${{ env.OPENSSL_DIR }}/include `
-          -DOPENSSL_LIBRARIES=${{ env.OPENSSL_DIR }}/lib `
-          ..
-        ninja -j4
+        CFLAGS="-O2 -s" ./configure \
+        --host=x86_64-w64-mingw32 \
+        --with-openssl=C:/openssl-3.5.3 \
+        --without-gnutls \
+        --enable-static=yes \
+        --enable-shared=no \
+        --disable-websocket \
+        --without-libxml2 \
+        --without-libssh2 \
+        --without-sqlite3 \
+        --without-cares
+    - name: Build aria2
+      shell: msys2 {0}
+      run: |
+        cd aria2
+        make -j$(nproc)
+        strip src/aria2c.exe
 
-    - name: Upload aria2 binary
+    - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
-        name: aria2-pqc-cmake
-        path: aria2/build/aria2c.exe
+        name: aria2-windows-openssl
+        path: aria2/src/aria2c.exe
+
+    # - name: Upload aria2 binary
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: aria2-pqc-cmake
+    #     path: aria2/build/aria2c.exe
