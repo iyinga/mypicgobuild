@@ -19,54 +19,57 @@ jobs:
       run: |
         choco install msys2 -y
         echo "C:\tools\msys64\usr\bin" | Out-File -Append $env:GITHUB_PATH
-        C:\tools\msys64\usr\bin\bash -lc "
+        C:\tools\msys64\mingw64.exe bash -lc "
           pacman -Sy --noconfirm &&
           pacman -S --noconfirm \
-            base-devel git cmake ninja autoconf automake libtool \
-            perl gcc make pkg-config zlib zlib-devel \
-            libxml2 libxml2-devel sqlite sqlite-devel \
-            c-ares c-ares-devel
+            git make cmake ninja autoconf automake libtool \
+            mingw-w64-x86_64-gcc \
+            mingw-w64-x86_64-pkg-config \
+            mingw-w64-x86_64-zlib \
+            mingw-w64-x86_64-libxml2 \
+            mingw-w64-x86_64-sqlite \
+            mingw-w64-x86_64-c-ares
         "
 
     - name: Build liboqs
       run: |
-        C:\tools\msys64\usr\bin\bash -lc "
+        C:\tools\msys64\mingw64.exe bash -lc "
           git clone --recursive https://github.com/open-quantum-safe/liboqs.git &&
           cd liboqs &&
           mkdir build && cd build &&
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64/usr/local ..
           ninja -j$(nproc) && ninja install
         "
 
-    - name: Build OpenSSL (official)
+    - name: Build OpenSSL 3.5.3
       run: |
-        C:\tools\msys64\usr\bin\bash -lc "
+        C:\tools\msys64\mingw64.exe bash -lc "
           git clone https://github.com/openssl/openssl.git &&
           cd openssl &&
           git checkout openssl-3.5.3 &&
-          ./Configure linux-generic64 no-shared --prefix=/usr/local/openssl &&
+          ./Configure mingw64 no-shared --prefix=/mingw64/usr/local/openssl-3.5.3 &&
           make -j$(nproc) && make install_sw
         "
 
     - name: Build oqs-provider
       run: |
-        C:\tools\msys64\usr\bin\bash -lc "
+        C:\tools\msys64\mingw64.exe bash -lc "
           git clone https://github.com/open-quantum-safe/oqs-provider.git &&
           cd oqs-provider &&
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DOPENSSL_ROOT_DIR=/usr/local/openssl \
-            -Dliboqs_DIR=/usr/local/lib/cmake/liboqs \
-            -DCMAKE_INSTALL_PREFIX=/usr/local/oqs-provider .
+            -DOPENSSL_ROOT_DIR=/mingw64/usr/local/openssl-3.5.3 \
+            -Dliboqs_DIR=/mingw64/usr/local/lib/cmake/liboqs \
+            -DCMAKE_INSTALL_PREFIX=/mingw64/usr/local/oqs-provider .
           ninja -j$(nproc) && ninja install
         "
 
     - name: Build aria2
       run: |
-        C:\tools\msys64\usr\bin\bash -lc "
+        C:\tools\msys64\mingw64.exe bash -lc "
           cd aria2 &&
           autoreconf -i &&
           ./configure \
-            --with-openssl=/usr/local/openssl \
+            --with-openssl=/mingw64/usr/local/openssl-3.5.3 \
             --without-gnutls \
             --enable-static \
             --disable-shared &&
