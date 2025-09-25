@@ -102,17 +102,12 @@ jobs:
       shell: msys2 {0}
       run: |
         cd aria2
-        CFLAGS="-O2 -s" ./configure \
+        CFLAGS="-O2 -s -D_FILE_OFFSET_BITS=64" ./configure \
         --host=x86_64-w64-mingw32 \
         --with-openssl=C:/openssl-3.5.3 \
         --without-gnutls \
         --enable-static=yes \
-        --enable-shared=no \
-        --disable-websocket \
-        --without-libxml2 \
-        --without-libssh2 \
-        --without-sqlite3 \
-        --without-cares
+        --enable-shared=no
     - name: Build aria2
       shell: msys2 {0}
       run: |
@@ -124,7 +119,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: aria2-windows-openssl
-        path: aria2/src/aria2c.exe
+        path: aria2/src/*
 
     # - name: Upload aria2 binary
     #   uses: actions/upload-artifact@v4
