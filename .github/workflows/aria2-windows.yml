@@ -1,0 +1,70 @@
+name: Build Aria2 with PQC for Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      OPENSSL_DIR: C:\oqs-openssl
+      LIBOQS_DIR: C:\liboqs
+      OQSPROV_DIR: C:\oqs-provider
+      ARIA2_DIR: C:\aria2
+
+    steps:
+    - name: Checkout aria2
+      uses: actions/checkout@v4
+      with:
+        repository: aria2/aria2
+        path: aria2
+
+    - name: Install dependencies
+      run: |
+        choco install strawberryperl -y
+        choco install python3 -y
+        choco install cmake ninja -y
+        choco install winflexbison -y
+        choco install make -y
+
+    - name: Build liboqs
+      run: |
+        git clone --recursive https://github.com/open-quantum-safe/liboqs.git
+        cd liboqs
+        mkdir build && cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%LIBOQS_DIR% ..
+        ninja
+        ninja install
+
+    - name: Build OpenSSL (master)
+      run: |
+        git clone --branch openssl-3.5.3 https://github.com/openssl/openssl.git
+        cd openssl
+        perl Configure VC-WIN64A no-shared --prefix=%OPENSSL_DIR%
+        nmake
+        nmake install
+
+    - name: Build oqs-provider
+      run: |
+        git clone https://github.com/open-quantum-safe/oqs-provider.git
+        cd oqs-provider
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+              -DOPENSSL_ROOT_DIR=%OPENSSL_DIR% ^
+              -Dliboqs_DIR=%LIBOQS_DIR% ^
+              -DCMAKE_INSTALL_PREFIX=%OQSPROV_DIR% .
+        ninja
+        ninja install
+
+    - name: Build aria2
+      run: |
+        cd %ARIA2_DIR%
+        autoreconf -i
+        ./configure --with-openssl=%OPENSSL_DIR% --without-gnutls --enable-static --disable-shared
+        make -j
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aria2-pqc-windows
+        path: ${{ env.ARIA2_DIR }}/src/aria2c.exe
