@@ -1,6 +1,7 @@
 name: Build wget for Windows x64
 
 on:
+
   workflow_dispatch:
 
 jobs:
@@ -8,6 +9,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
+
 
     - name: Clone wget source
       run: git clone https://github.com/mirror/wget.git
@@ -18,20 +20,39 @@ jobs:
         update: true
         install: >-
           base-devel
+          git
+          autoconf
+          automake
+          libtool
+          gperf
+          gettext
+          texinfo
+          pkg-config
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-make
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libidn2
           mingw-w64-x86_64-libiconv
           mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-zlib
 
     - name: Build wget
       shell: msys2 {0}
       run: |
         cd wget
         ./bootstrap
-        ./configure --host=x86_64-w64-mingw32 --with-ssl=openssl
+        ./configure \
+          --host=x86_64-w64-mingw32 \
+          --with-ssl=openssl \
+          --with-libidn2 \
+          --enable-ipv6 \
+          --enable-threads=posix \
+          --disable-debug \
+          --disable-nls \
+          CFLAGS="-O2 -static" \
+          LDFLAGS="-static"
         make -j$(nproc)
+        strip src/wget.exe
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
