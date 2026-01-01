@@ -26,6 +26,9 @@ jobs:
           libtool
           gperf
           gettext
+          gettext-devel
+          mingw-w64-x86_64-gettext
+          mingw-w64-x86_64-gettext-devel
           texinfo
           pkg-config
           mingw-w64-x86_64-gcc
@@ -35,6 +38,7 @@ jobs:
           mingw-w64-x86_64-libiconv
           mingw-w64-x86_64-openssl
           mingw-w64-x86_64-zlib
+
 
     - name: Build wget
       shell: msys2 {0}
