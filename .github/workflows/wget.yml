@@ -1,7 +1,6 @@
 name: Build static wget for Windows x64
 
 on:
-
   workflow_dispatch:
 
 jobs:
@@ -12,10 +11,10 @@ jobs:
 
 
     - name: Download wget release tarball
-      run: curl -LO https://ftp.gnu.org/gnu/wget/wget-latest.tar.gz
+      run: curl -LO https://ftp.gnu.org/gnu/wget/wget-1.24.5.tar.gz
 
     - name: Extract source
-      run: tar xf wget-latest.tar.gz
+      run: tar xf wget-1.24.5.tar.gz
 
     - name: Install MSYS2
       uses: msys2/setup-msys2@v2
@@ -35,9 +34,7 @@ jobs:
     - name: Build static wget
       shell: msys2 {0}
       run: |
-        cd wget-1.25.0
-        export gl_cv_func_gettimeofday_clobber=no
-        export ac_cv_func_daylight=no
+        cd wget-1.24.5
         ./configure \
           --host=x86_64-w64-mingw32 \
           --with-ssl=gnutls \
@@ -48,9 +45,8 @@ jobs:
         make -j$(nproc)
         strip src/wget.exe
 
-
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: wget-windows-x64-static
-        path: wget-1.25.0/src/wget.exe
+        path: wget-1.24.5/src/wget.exe
