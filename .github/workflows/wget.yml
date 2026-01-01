@@ -36,6 +36,8 @@ jobs:
       shell: msys2 {0}
       run: |
         cd wget-1.25.0
+        export gl_cv_func_gettimeofday_clobber=no
+        export ac_cv_func_daylight=no
         ./configure \
           --host=x86_64-w64-mingw32 \
           --with-ssl=gnutls \
@@ -45,6 +47,7 @@ jobs:
           LDFLAGS="-static"
         make -j$(nproc)
         strip src/wget.exe
+
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
