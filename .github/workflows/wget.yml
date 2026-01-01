@@ -1,4 +1,4 @@
-name: Build wget for Windows x64
+name: Build static wget for Windows x64
 
 on:
 
@@ -11,8 +11,11 @@ jobs:
     steps:
 
 
-    - name: Clone wget source
-      run: git clone https://github.com/mirror/wget.git
+    - name: Download wget release tarball
+      run: curl -LO https://ftp.gnu.org/gnu/wget/wget-latest.tar.gz
+
+    - name: Extract source
+      run: tar xf wget-latest.tar.gz
 
     - name: Install MSYS2
       uses: msys2/setup-msys2@v2
@@ -21,38 +24,23 @@ jobs:
         install: >-
           base-devel
           git
-          autoconf
-          automake
-          libtool
-          gperf
-          gettext
-          gettext-devel
-          mingw-w64-x86_64-gettext
-          mingw-w64-x86_64-gettext-devel
-          texinfo
-          pkg-config
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-make
           mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-gnutls
           mingw-w64-x86_64-libidn2
           mingw-w64-x86_64-libiconv
-          mingw-w64-x86_64-openssl
           mingw-w64-x86_64-zlib
 
-
-    - name: Build wget
+    - name: Build static wget
       shell: msys2 {0}
       run: |
-        cd wget
-        ./bootstrap
+        cd wget-1.25.0
         ./configure \
           --host=x86_64-w64-mingw32 \
-          --with-ssl=openssl \
-          --with-libidn2 \
-          --enable-ipv6 \
-          --enable-threads=posix \
-          --disable-debug \
+          --with-ssl=gnutls \
           --disable-nls \
+          --enable-ipv6 \
           CFLAGS="-O2 -static" \
           LDFLAGS="-static"
         make -j$(nproc)
@@ -61,5 +49,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: wget-windows-x64
-        path: wget/src/wget.exe
+        name: wget-windows-x64-static
+        path: wget-1.25.0/src/wget.exe
