@@ -11,33 +11,33 @@ jobs:
       - name: get source
         shell: bash
         run: |
-           git clone https://github.com/Molunerfinn/PicGo.git .
+           git clone -b master https://github.com/Molunerfinn/PicGo.git .
            #rm yarn.lock
-           sed -i '/initTalk/d' src/main.ts
-           sed -i '/^$/d' src/main.ts
+           sed -i '/initTalkingData/d' src/renderer/main.ts
+           sed -i '/^$/d' src/renderer/main.ts
            sed -i 's/always/never/g' package.json       
       - name: 设置 Node.js + Yarn
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: yarn
-          cache-dependency-path: yarn.lock
-      - name: 设置 Yarn 源和网络超时
-        shell: bash
-        run: |
-          yarn config set registry https://registry.npmmirror.com
-          yarn config set disturl https://npmmirror.com/mirrors/node
-          yarn config set electron_mirror https://npmmirror.com/mirrors/electron/
-          yarn config set network-timeout 600000        
-      - name: 缓存 Electron 缓存目录
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/electron
-            ~/.cache/electron-builder
-          key: ${{ runner.os }}-electron-${{ hashFiles('yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-electron-
+          node-version: 22
+          # cache: yarn
+          # cache-dependency-path: yarn.lock
+      # - name: 设置 Yarn 源和网络超时
+      #   shell: bash
+      #   run: |
+      #     yarn config set registry https://registry.npmmirror.com
+      #     yarn config set disturl https://npmmirror.com/mirrors/node
+      #     yarn config set electron_mirror https://npmmirror.com/mirrors/electron/
+      #     yarn config set network-timeout 600000        
+      # - name: 缓存 Electron 缓存目录
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ~/.cache/electron
+      #       ~/.cache/electron-builder
+      #     key: ${{ runner.os }}-electron-${{ hashFiles('yarn.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-electron-
       - name: Yarn install
         shell: bash
         run: |
@@ -50,6 +50,6 @@ jobs:
           # A file, directory or wildcard pattern that describes what to upload
           path: |
             ./dist*/*.exe
-            ./src/main.ts
+            #./src/main.ts
 
       
