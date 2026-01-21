@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # cache: yarn
+          cache: true
           # cache-dependency-path: yarn.lock
       # - name: 设置 Yarn 源和网络超时
       #   shell: bash
@@ -42,7 +42,8 @@ jobs:
         shell: bash
         run: |
           yarn install
-          yarn electron:build --win --publish never
+          #yarn electron:build --win --publish never
+          yarn build:win
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4
         with:
