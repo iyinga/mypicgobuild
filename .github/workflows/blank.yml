@@ -13,6 +13,7 @@ jobs:
         run: |
            git clone -b master https://github.com/Molunerfinn/PicGo.git .
            #rm yarn.lock
+           rm pnpm-workspace.yaml
            sed -i '/initTalkingData/d' src/renderer/main.ts
            sed -i '/^$/d' src/renderer/main.ts
            sed -i 's/always/never/g' package.json
