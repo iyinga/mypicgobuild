@@ -16,11 +16,18 @@ jobs:
            sed -i '/initTalkingData/d' src/renderer/main.ts
            sed -i '/^$/d' src/renderer/main.ts
            sed -i 's/always/never/g' package.json       
-      - name: 设置 Node.js + Yarn
+      - name: 设置 Node.js + pnpm
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          #cache: "yarn"
+          cache: "pnpm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+          
           # cache-dependency-path: yarn.lock
       # - name: 设置 Yarn 源和网络超时
       #   shell: bash
@@ -38,12 +45,12 @@ jobs:
       #     key: ${{ runner.os }}-electron-${{ hashFiles('yarn.lock') }}
       #     restore-keys: |
       #       ${{ runner.os }}-electron-
-      - name: Yarn install
+      - name: build
         shell: bash
         run: |
-          yarn 
+          pnpm install 
           #yarn electron:build --win --publish never
-          yarn build:win
+          pnpm run build:win
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4
         with:
