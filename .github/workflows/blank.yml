@@ -15,18 +15,20 @@ jobs:
            #rm yarn.lock
            sed -i '/initTalkingData/d' src/renderer/main.ts
            sed -i '/^$/d' src/renderer/main.ts
-           sed -i 's/always/never/g' package.json       
+           sed -i 's/always/never/g' package.json
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+           
       - name: 设置 Node.js + pnpm
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "pnpm"
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+
           
           # cache-dependency-path: yarn.lock
       # - name: 设置 Yarn 源和网络超时
