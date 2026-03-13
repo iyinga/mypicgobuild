@@ -41,7 +41,7 @@ jobs:
       - name: Yarn install
         shell: bash
         run: |
-          yarn install
+          yarn 
           #yarn electron:build --win --publish never
           yarn build:win
       - name: Upload a Build Artifact
