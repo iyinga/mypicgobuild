@@ -14,9 +14,10 @@ jobs:
            git clone -b master https://github.com/Molunerfinn/PicGo.git .
            #rm yarn.lock
            rm pnpm-workspace.yaml
-           sed -i '/initTalkingData/d' src/renderer/main.ts
-           sed -i '/^$/d' src/renderer/main.ts
-           sed -i 's/always/never/g' package.json
+           rm src/renderer/utils/analytics.ts
+           #sed -i '/initTalkingData/d' src/renderer/main.ts
+           #sed -i '/^$/d' src/renderer/main.ts
+           #sed -i 's/always/never/g' package.json
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
