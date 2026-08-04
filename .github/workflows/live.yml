@@ -8,7 +8,7 @@ jobs:
       #签出代码 
       - name: get source
         run: |
-          git clone --depth=1 https://github.com/xiaoyaocz/dart_simple_live.git .
+          git clone --depth=1 https://github.com/June6699/dart_simple_live .
 
       #APK签名设置
       - name: Download Android keystore
@@ -35,7 +35,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.x'
+          flutter-version: '3.41.x'
           cache: true 
       # 缓存 Gradle
       # - name: Cache Gradle
@@ -88,6 +88,4 @@ jobs:
         with:
           name: android
           path: |
-            simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/
